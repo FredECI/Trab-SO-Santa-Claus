@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #define NUM_REINDEER 4             // Número de renas (fixo)
 #define NUM_ELVES_TO_WAKE_UP 3    // Número de elfos necessários para acordar o Papai Noel
@@ -15,7 +17,6 @@ pthread_cond_t elfCond = PTHREAD_COND_INITIALIZER;
 
 int numReindeerArrived = 0;
 int numElvesWaiting = 0;
-
 
 void *getSleight() {
     sleep(1); // Simula tempo de preapação do trenó
@@ -66,18 +67,18 @@ void *reindeerThread(void *arg) {
     // Lógica para que as renas retornem do Polo Norte
     pthread_mutex_lock(&reindeerMutex);
 
-    printf("Rena: Voltando do Polo Norte\n");
+    printf("RENA: Voltando do Polo Norte\n");
     sleep(1);  // Simula tempo de retorno das renas
     numReindeerArrived++;
 
     if (numReindeerArrived == NUM_REINDEER) {
-        printf("Rena: Última rena voltou! Acordando o Papai Noel\n");
+        printf("RENA: Última rena voltou! Acordando o Papai Noel\n");
         pthread_cond_signal(&reindeerCond);
     }
 
     // Aguarda o Papai Noel liberar
     pthread_cond_wait(&reindeerCond, &reindeerMutex);
-    printf("Papai Noel Liberou a Rena, prendendo-se ao trenó\n");
+    printf("PAPAI NOEL: Liberou a Rena, prendendo-se ao trenó\n");
     getHitched();
     pthread_mutex_unlock(&reindeerMutex);
     return NULL; 
@@ -118,24 +119,40 @@ int main() {
     printf("INICIANDO O PAPAI NOEL\n");
     pthread_create(&santaTid, NULL, santaThread, NULL);
 
-    printf("INICIANDO NOVA LEVA DE RENAS\n");
-    for (int i = 0; i < NUM_REINDEER; i++) {
-        pthread_create(&reindeerTids[i], NULL, reindeerThread, NULL);
+    for (int i = 0; i < 3; i++) {
+        
+        printf("INICIANDO NOVA LEVA DE RENAS\n");
+        for (int i = 0; i < NUM_REINDEER; i++) {
+            pthread_create(&reindeerTids[i], NULL, reindeerThread, NULL);
+        }
+
+        for (int i = 0; i < NUM_REINDEER; i++) {
+            pthread_join(reindeerTids[i], NULL);
+        }
+        printf("Partiu Natal!!!\n");
     }
+
+    // Não é elegante, mas forçamos o fim da thread
+    pthread_kill(santaTid, SIGTERM);
+    pthread_join(santaTid, NULL);
+
+    // printf("INICIANDO NOVA LEVA DE RENAS\n");
+    // for (int i = 0; i < NUM_REINDEER; i++) {
+    //     pthread_create(&reindeerTids[i], NULL, reindeerThread, NULL);
+    // }
     // for (int i = 0; i < NUM_ELVES; i++) {
     //     pthread_create(&elfTids[i], NULL, elfThread, NULL);
     // }
 
     // Aguarda todas as threads terminarem
-    for (int i = 0; i < NUM_REINDEER; i++) {
-        pthread_join(reindeerTids[i], NULL);
-    }
+    // for (int i = 0; i < NUM_REINDEER; i++) {
+    //     pthread_join(reindeerTids[i], NULL);
+    // }
     // for (int i = 0; i < NUM_ELVES; i++) {
     //     pthread_join(elfTids[i], NULL);
     // }
 
     // Encerramento do Papai Noel
-    pthread_join(santaTid, NULL);
 
     return 0;
 }
